@@ -1,0 +1,90 @@
+---
+title: "IMBD Movie Dataset Analysiss"
+output: html_document
+date: "2024-01-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(tidytext)
+library(stopwords)
+library(wordcloud)
+```
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load('2023-12-12')
+holiday_movies <- tuesdata$holiday_movies
+holiday_movie_genres <- tuesdata$holiday_movie_genres
+```
+
+# Does a longer run time correlate with lower ratings?
+
+```{r}
+
+run_time_ratings <- holiday_movies %>%
+  select(runtime_minutes, average_rating) %>%
+  drop_na() %>%
+  filter(between(runtime_minutes, 100,288 ))
+
+
+
+ggplot(run_time_ratings, aes(x= average_rating, y= runtime_minutes))+
+  geom_point(size = 2, color= "skyblue" )+
+  geom_segment(aes(x= average_rating,
+                   xend = average_rating,
+                   y= 0,
+                   yend=runtime_minutes, color = "skyblue")
+               )+ 
+   scale_x_continuous(breaks =c(1,2,3,4,5,6,7,8,9,10 )) +
+  
+  labs(title = "The effect of movies' runtime on their average ratings")
+
+theme(axis.text.x = element_text(angle=65, vjust=0.6))
+  
+
+
+```
+
+
+# What are the common words in titles of the movies?
+
+```{r}
+# extact the movie title column from the data set 
+
+holidaymovie_column <- holiday_movies %>%
+  filter(christmas == "TRUE") %>%
+  select(primary_title) 
+  
+
+# restructure the column as one token per row
+
+tidy_movies <- holidaymovie_column %>%
+  unnest_tokens(word, primary_title)
+  tidy_movies
+```
+
+
+
+```{r}
+# get rid of stop words so that we can focus on the main words 
+clean_movies <- tidy_movies %>%
+  anti_join(get_stopwords()) %>%
+  count(word, sort = TRUE)
+
+
+
+```
+
+```{r}
+clean_movies_cloud <- clean_movies %>%
+
+  with(wordcloud(word, n, max.words = 800,
+                 colors=c("magenta", "purple")
+                ) )
+clean_movies_cloud
+```
+
+
+
