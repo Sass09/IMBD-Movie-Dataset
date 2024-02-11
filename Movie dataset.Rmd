@@ -11,6 +11,10 @@ library(dplyr)
 library(tidytext)
 library(stopwords)
 library(wordcloud)
+library(tidytext)
+library(tm)
+library(ggraph)
+library(igraph)
 ```
 
 ```{r}
@@ -80,11 +84,69 @@ clean_movies <- tidy_movies %>%
 ```{r}
 clean_movies_cloud <- clean_movies %>%
 
-  with(wordcloud(word, n, max.words = 800,
-                 colors=c("magenta", "purple")
+  with(wordcloud(word, n, max.words = 850,
+                 colors=c("orange", "purple")
                 ) )
 clean_movies_cloud
 ```
 
+# Construct a bi-gram 
 
+```{r}
+
+
+bigram_movie_Christmas <- holiday_movies %>%
+  filter(christmas == "TRUE")
+
+bigram_movie <- Corpus(VectorSource(holiday_movies$primary_title))
+
+bigram_movie <- tm_map(bigram_movie, content_transformer(tolower))
+bigram_movie <- tm_map(bigram_movie, removeNumbers)
+bigram_movie <- tm_map(bigram_movie, removeWords, stopwords("english"))
+bigram_movie <- tm_map(bigram_movie, removePunctuation)
+
+df_bigram_movie <- data.frame(text = sapply(bigram_movie, as.character),
+                              stringAsFactors = FALSE)
+
+new_bigram_movie <- df_bigram_movie %>%
+  unnest_tokens(bigram, text, token = "ngrams", n=2)
+
+new_bigram_movie %>%
+  count(bigram, sort = TRUE)  
+
+new_bigram_movie <- na.omit(new_bigram_movie)
+
+bigram_separated <- new_bigram_movie %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigram_filtered <- bigram_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+
+bigram_counts <- bigram_filtered %>%
+  count( word1, word2, sort = TRUE)
+bigram_counts
+
+bigram_filtered %>%
+  filter(word1 == "christmas") %>%
+  count(word2, sort = TRUE)
+
+bigraph <- bigram_counts %>%
+  filter(n>6) %>%
+  graph_from_data_frame()
+bigraph
+
+set.seed(2017)
+
+ggraph(bigraph, layout = "fr") +
+  geom_edge_link()+
+  geom_node_point()+
+  geom_node_text(aes(label = name), vjust= 1, hjust = 1)
+
+
+
+
+
+```
 
